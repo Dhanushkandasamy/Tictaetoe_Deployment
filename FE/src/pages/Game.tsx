@@ -3,7 +3,7 @@ import { socket } from "../socket";
 
 const emptyBoard = Array(9).fill(null);
 
-export default function Game({ details }: any) {
+export default function Game({ details, onNext }: any) {
     const [board, setBoard] = useState(emptyBoard);
     const [turn, setTurn] = useState(false);
     const [winner, setWinner] = useState(null);
@@ -68,8 +68,13 @@ export default function Game({ details }: any) {
             <p>You are playing as : {mySymbol}</p>
             {
                 winner ?
-                <p>{winner} won the game</p> :
-                <p>{turn ? "Your turn" : "Opponent's turn"}</p>
+                    (
+                        <>
+                            <p>{winner} won the game</p>
+                            <button onClick={() => onNext(4)}>Leaderboard</button>
+                        </>
+                    ) :
+                    <p>{turn ? "Your turn" : "Opponent's turn"}</p>
             }
 
             <p>

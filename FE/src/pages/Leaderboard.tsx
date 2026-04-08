@@ -1,23 +1,39 @@
 import { useEffect, useState } from "react";
 import { CONSTANTS } from "./constants";
 
-export default function Leaderboard() {
+export default function Leaderboard({ name }: any) {
   const [data, setData] = useState<any[]>([]);
 
+
   useEffect(() => {
-    fetch(`${CONSTANTS.API_BASE_URL}/leaderboard`)
+    fetch(`${CONSTANTS.API_BASE_URL}/leaderboard?name=${name}`)
       .then((r) => r.json())
-      .then(setData);
+      .then((data)=>setData(data.results));
   }, []);
 
   return (
     <div>
       <h2>Leaderboard</h2>
-      {data.map((p, i) => (
-        <div key={i}>
-          Data
-        </div>
-      ))}
+      <table>
+        <thead>
+              <tr>
+                <th>Player 1</th>
+                <th>Player 2</th>
+                <th>Winner</th>
+             </tr>
+        </thead>
+        <tbody>
+            {
+                data.map((p, i) => (
+                    <tr key={i}>
+                        <td>{p.player1}</td>
+                        <td>{p.player2}</td>
+                        <td>{p.winner}</td>
+                    </tr>
+                ))
+            }
+        </tbody>
+      </table>
     </div>
   );
 }

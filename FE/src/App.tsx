@@ -14,9 +14,9 @@ function App() {
   
     if (step === 1) return <Nickname name={name} setName={setName} onNext={(_:any) => setStep(2)} />;
     if (step === 2) return <Matcher name={name} onMatch={(m:any)=>{setStep(3); setMatch(m);}} />;
-    if (step === 3) return <Game details={match} />;
+    if (step === 3) return <Game details={match} onNext={(_:any) => setStep(4)} />;
   
-    return <Leaderboard />;
+    return <Leaderboard name={name}/>;
 
 }
 

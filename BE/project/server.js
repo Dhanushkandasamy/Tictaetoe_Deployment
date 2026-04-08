@@ -25,6 +25,7 @@ const io = new Server(httpServer, {
 const players = {};
 const waitingPlayers = new Set();
 const rooms = {};
+const leaderboard = [];
 
 function checkBoard(board,symbol) {
     const winningCombinations = [
@@ -125,6 +126,7 @@ io.on("connection", (socket) => {
         const winner = checkBoard(board, symbol );
 
         if (winner) {
+            leaderboard.push({ player1: match.player1.name, player2: match.player2.name, winner: player.name });
             socket.to(roomId).emit("game_over", { player });
             io.to(player.socketId).emit("game_over", { player });
             return;
@@ -159,7 +161,12 @@ io.on("connection", (socket) => {
 });
 
 app.get('/leaderboard', (req, res) => {
-    res.json({ results: rooms });
+    const query = req.query.name;
+    console.log(leaderboard,query);
+    if(!query) return res.json({ results: leaderboard });
+    
+    const result = leaderboard.filter((x) => x.player1 === query || x.player2 === query);
+    res.json({ results: result });
 });
 
 app.get('/health', (req, res) => {
