@@ -27,7 +27,7 @@ const waitingPlayers = new Set();
 const rooms = {};
 const leaderboard = [];
 
-function checkBoard(board,symbol) {
+function checkBoard(board, symbol) {
     const winningCombinations = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
         [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
@@ -36,8 +36,8 @@ function checkBoard(board,symbol) {
 
     const win = winningCombinations.find(combination => {
         return (
-            board[combination[0]] === board[combination[1]] && 
-            board[combination[1]] === board[combination[2]] && 
+            board[combination[0]] === board[combination[1]] &&
+            board[combination[1]] === board[combination[2]] &&
             board[combination[0]] === symbol
         )
     })
@@ -50,8 +50,13 @@ io.on("connection", (socket) => {
     // console.log("User connected:", socket.id);
 
     socket.on("nickname", (name) => {
-        players[socket.id] = { name, matched: false };
-        waitingPlayers.add(socket.id);
+        if (players[socket.id]) return;
+
+        players[socket.id] = {
+            name,
+            socketId: socket.id,
+            matched: false
+        };
     });
 
     // Matchmaking
@@ -59,9 +64,7 @@ io.on("connection", (socket) => {
         const currentPlayer = players[socket.id];
         if (!currentPlayer || currentPlayer.matched) return;
 
-        // console.log("Finding match for:", currentPlayer.name);
-
-        waitingPlayers.delete(socket.id);
+        waitingPlayers.add(socket.id);
 
         let matchPlayer = null;
 
@@ -72,58 +75,56 @@ io.on("connection", (socket) => {
             }
         }
 
-        if (matchPlayer) {
-            waitingPlayers.delete(matchPlayer);
+        if (!matchPlayer) return;
 
-            const player1 = socket.id;
-            const player2 = matchPlayer;
+        const player1 = socket.id;
+        const player2 = matchPlayer;
 
-            if (players[player1].matched || players[player2].matched) return;
+        if (players[player1].matched || players[player2].matched) return;
 
-            const ids = [player1, player2].sort();
-            const roomId = `${ids[0]}-${ids[1]}`;
+        waitingPlayers.delete(player1);
+        waitingPlayers.delete(player2);
 
-            players[player1].matched = true;
-            players[player2].matched = true;
+        const ids = [player1, player2].sort();
+        const roomId = `${ids[0]}-${ids[1]}`;
 
-            const match = {
-                player1: {
-                    name: players[player1].name,
-                    socketId: player1,
-                    symbol: "X",
-                },
-                player2: {
-                    name: players[player2].name,
-                    socketId: player2,
-                    symbol: "O",
-                },
-                roomId,
-            };
+        players[player1].matched = true;
+        players[player2].matched = true;
 
-            rooms[roomId] = match;
+        const match = {
+            player1: {
+                name: players[player1].name,
+                socketId: player1,
+                symbol: "X",
+            },
+            player2: {
+                name: players[player2].name,
+                socketId: player2,
+                symbol: "O",
+            },
+            roomId,
+        };
 
-            socket.join(roomId);
-            io.sockets.sockets.get(player2)?.join(roomId);
+        rooms[roomId] = match;
 
-            socket.emit("match_found", match);
-            io.to(player2).emit("match_found", match);
-            io.to(roomId).emit("room_joined", match);
+        socket.join(roomId);
+        io.sockets.sockets.get(player2)?.join(roomId);
 
-            // console.log("Match found:", match);
-        } else {
-            waitingPlayers.add(socket.id);
-        }
+        socket.emit("match_found", match);
+        io.to(player2).emit("match_found", match);
+        io.to(roomId).emit("room_joined", match);
+
     });
 
     // Handle move
     socket.on("move", (data) => {
-        const { roomId , board } = data;
+        const { roomId, board } = data;
         const match = rooms[roomId];
         if (!match) return;
-        
+
         const player = match.player1.socketId === socket.id ? match.player1 : match.player2;
         const symbol = player.symbol;
-        const winner = checkBoard(board, symbol );
+        const winner = checkBoard(board, symbol);
 
         if (winner) {
             leaderboard.push({ player1: match.player1.name, player2: match.player2.name, winner: player.name });
@@ -162,9 +163,9 @@ io.on("connection", (socket) => {
 
 app.get('/leaderboard', (req, res) => {
     const query = req.query.name;
-    console.log(leaderboard,query);
-    if(!query) return res.json({ results: leaderboard });
-    
+    console.log(leaderboard, query);
+    if (!query) return res.json({ results: leaderboard });
+
     const result = leaderboard.filter((x) => x.player1 === query || x.player2 === query);
     res.json({ results: result });
 });
